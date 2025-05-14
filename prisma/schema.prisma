@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int            @id @default(autoincrement())
+  email           String         @unique
+  password        String
+  firstname       String
+  lastname        String
+  activity        String?
+  userQuestions   Question[]     @relation(name: "userQuestions")
+  savedQuestions  Question[]     @relation("savedQuestions")
+  savedPosts      Post[]         @relation("savedPosts")
+  answers         Answer[]
+  likedQuestions  Int[]          @default([])
+  likedAnswers    Int[]          @default([])
+  likedArticles   Int[]          @default([])
+  likedComments   Int[]          @default([])
+  dislikedAnswers Int[]          @default([])
+  Message         Message[]
+  Post            Post[]
+  Comment         Comment[]
+  subscriptions   Subscription[] @relation("Subscriber")
+  subscribers     Subscription[] @relation("SubscribedTo")
+}
+
+model Question {
+  id     Int    @id @default(autoincrement())
+  title  String
+  body   String
+  views  Int    @default(0)
+  rating Int    @default(0)
+
+  author   User? @relation(fields: [authorId], references: [id], name: "userQuestions")
+  authorId Int
+
+  savedBy User[] @relation("savedQuestions")
+
+  keywords   Keyword[]
+  files      File[]
+  answers    Answer[]
+  created_at DateTime  @default(now())
+  updated_at DateTime
+}
+
+model Keyword {
+  id         Int        @id @default(autoincrement())
+  body       String
+  question   Question[]
+  questionId Int?
+  post       Post[]
+  postId     Int?
+}
+
+model Message {
+  id      Int     @id @default(autoincrement())
+  message String?
+  type    String?
+  roomId  String?
+  userId  Int
+  user    User    @relation(fields: [userId], references: [id])
+}
+
+model Answer {
+  id     Int    @id @default(autoincrement())
+  rating Int    @default(0)
+  body   String
+  files  File[]
+
+  author   User @relation(fields: [authorId], references: [id])
+  authorId Int
+
+  question   Question @relation(fields: [questionId], references: [id])
+  questionId Int
+
+  created_at DateTime @default(now())
+  updated_at DateTime
+}
+
+model File {
+  id         Int      @id @default(autoincrement())
+  link       String
+  created_at DateTime @default(now())
+
+  answer   Answer? @relation(fields: [answerId], references: [id])
+  answerId Int?
+
+  question   Question? @relation(fields: [questionId], references: [id])
+  questionId Int?
+  post       Post?     @relation(fields: [postId], references: [id])
+  postId     Int?
+  comment    Comment?  @relation(fields: [commentId], references: [id])
+  commentId  Int?
+}
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  title      String
+  body       String
+  created_at DateTime @default(now())
+
+  views  Int @default(0)
+  rating Int @default(0)
+
+  author   User      @relation(fields: [authorId], references: [id])
+  authorId Int
+  keywords Keyword[]
+  files    File[]
+  comments Comment[]
+  savedBy  User[]    @relation("savedPosts")
+  lang     String?
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  body       String
+  created_at DateTime @default(now())
+
+  rating   Int  @default(0)
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId Int
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId Int
+
+  replyOnId Int?
+  replyOn   Comment?  @relation("CommentReplies", fields: [replyOnId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+
+  files File[]
+}
+
+model Subscription {
+  id             Int  @id @default(autoincrement())
+  subscriber     User @relation("Subscriber", fields: [subscriberId], references: [id])
+  subscriberId   Int
+  subscribedTo   User @relation("SubscribedTo", fields: [subscribedToId], references: [id])
+  subscribedToId Int
+
+  @@unique([subscriberId, subscribedToId])
+}
