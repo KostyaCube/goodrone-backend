@@ -11,9 +11,9 @@ export class AuthService {
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
-  async register(dto: RegisterDto): Promise<{ access_token: string }> {
+  async register(dto: RegisterDto): Promise<{ token: string; user: User; }> {
     const existingUser = await this.userService.findOne({ email: dto.email });
     if (existingUser) {
       throw new ConflictException('User already exists');
@@ -33,7 +33,7 @@ export class AuthService {
     return this.generateToken(user);
   }
 
-  async login(dto: LoginDto): Promise<{ access_token: string }> {
+  async login(dto: LoginDto): Promise<{ token: string; user: User; }> {
     const user = await this.userService.findOne({ email: dto.email });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -50,7 +50,8 @@ export class AuthService {
   private generateToken(user: User) {
     const payload = { id: user.id, email: user.email };
     return {
-      access_token: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload),
+      user
     };
   }
 }

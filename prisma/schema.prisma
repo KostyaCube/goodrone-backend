@@ -13,6 +13,7 @@ model User {
   password        String
   firstname       String
   lastname        String
+  avatar          String?
   activity        String?
   userQuestions   Question[]     @relation(name: "userQuestions")
   savedQuestions  Question[]     @relation("savedQuestions")
