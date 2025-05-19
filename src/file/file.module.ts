@@ -6,4 +6,4 @@ import { FileController } from './file.controller';
   controllers: [FileController],
   providers: [FileService],
 })
-export class FileModule {}
+export class FileModule { }
