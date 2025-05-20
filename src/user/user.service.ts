@@ -1,49 +1,54 @@
-import { Injectable } from '@nestjs/common';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { Prisma, User } from '@prisma/client';
+import { API_MESSAGES } from 'src/constants/api-messages';
 
 @Injectable()
 export class UserService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(UserService.name);
 
-  create(createUserDto: Prisma.UserCreateInput) {
+  constructor(private prisma: PrismaService) { }
+
+  async create(createUserDto: Prisma.UserCreateInput): Promise<User> {
     try {
-      return this.prisma.user.create({ data: createUserDto });
+      return await this.prisma.user.create({ data: createUserDto });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(`${API_MESSAGES.USER_EXISTS}: ${err.message}`);
+      throw new HttpException(API_MESSAGES.USER_EXISTS, HttpStatus.BAD_REQUEST);
     }
   }
 
-  async findOne(userWhereUniqueInput: Prisma.UserWhereUniqueInput): Promise<User | null | undefined> {
+  async findOne(userWhereUniqueInput: Prisma.UserWhereUniqueInput): Promise<User> {
     try {
-      return this.prisma.user.findUnique({
+      const user = await this.prisma.user.findUnique({
         where: userWhereUniqueInput,
         include: {
           savedQuestions: { include: { author: true, answers: true, keywords: true } },
           savedPosts: true,
           subscriptions: {
             include: {
-              subscribedTo: { select: { id: true, firstname: true, lastname: true } },
+              subscribedTo: { select: { id: true, firstname: true, lastname: true, activity: true } },
             },
           },
           subscribers: {
             include: {
-              subscriber: { select: { id: true, firstname: true, lastname: true } },
+              subscriber: { select: { id: true, firstname: true, lastname: true, activity: true } },
             },
           },
         },
       });
+
+      if (!user) {
+        throw new HttpException(API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
+      }
+
+      return user;
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(`${API_MESSAGES.USER_EXISTS}:  ${err.message}`);
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      throw new HttpException(API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-  }
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
   }
 }

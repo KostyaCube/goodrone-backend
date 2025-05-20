@@ -1,53 +1,76 @@
-import { Controller, Get, Delete, Res, Param, HttpStatus, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { Response } from 'express';
-import { FileService } from './file.service';
+import {
+  Controller,
+  Get,
+  Delete,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+  Param,
+  HttpException,
+  HttpStatus,
+  Res
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { editFileName, imageFileFilter } from './file.utils';
 import { File as FileEntity } from '@prisma/client';
-
+import { diskStorage } from 'multer';
+import { Express, Response } from 'express';
+import { FileService } from './file.service';
+import { editFileName, imageFileFilter } from './file.utils';
+import { API_MESSAGES } from 'src/constants/api-messages';
 
 @Controller('file')
 export class FileController {
   constructor(private readonly fileService: FileService) { }
 
   @Get(':imagename')
-  getImage(@Param('imagename') image: string, @Res() res: Response): { status: HttpStatus; data: void; } {
+  async getImage(@Param('imagename') image: string, @Res() res: Response): Promise<void> {
     try {
-      const response = res.sendFile(image, { root: './uploads' });
-      return {
-        status: HttpStatus.OK,
-        data: response,
-      };
+      return res.sendFile(image, { root: './uploads' }, (err) => {
+        if (err) {
+          throw new HttpException(API_MESSAGES.IMAGE_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+      });
     } catch (err) {
-      throw new Error(err);
+      throw new HttpException(API_MESSAGES.IMAGE_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   @Delete(':id')
-  async deleteImageById(@Param('id') id: string): Promise<void> {
+  async deleteImageById(@Param('id') id: string): Promise<{ message: string; }> {
+    const numericId = Number(id);
+    if (isNaN(numericId)) {
+      throw new HttpException(API_MESSAGES.INVALID_ID, HttpStatus.BAD_REQUEST);
+    }
+
     try {
-      await this.fileService.deleteFileById({ id: Number(id) });
+      await this.fileService.deleteFileById({ id: numericId });
+      return { message: API_MESSAGES.DELETED };
     } catch (e) {
-      console.error(e);
+      throw new HttpException(API_MESSAGES.DELETE_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   @UseInterceptors(FileInterceptor('image', {
-    storage: diskStorage({ destination: './uploads', filename: editFileName }),
+    storage: diskStorage({
+      destination: './uploads',
+      filename: editFileName,
+    }),
     fileFilter: imageFileFilter
   }))
   @Post('image-upload')
-  async uploadFile(@UploadedFile() image: File): Promise<FileEntity> {
-    const photoUrl = `${process.env.HOST}/file/${image.name}`;
+  async uploadFile(@UploadedFile() image: Express.Multer.File): Promise<FileEntity> {
+    if (!image) {
+      throw new HttpException(API_MESSAGES.NO_FILE, HttpStatus.BAD_REQUEST);
+    }
+
+    const photoUrl = `${process.env.HOST}/file/${image.filename}`;
     try {
       return await this.fileService.createFile({
         created_at: new Date(),
         link: photoUrl,
       });
-
     } catch (err) {
-      console.error(err.message);
-    };
+      throw new HttpException(API_MESSAGES.UPLOAD_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
