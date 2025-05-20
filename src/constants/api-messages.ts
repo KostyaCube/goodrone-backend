@@ -4,6 +4,7 @@ export const API_MESSAGES = {
     VALIDATION_FAILS: 'Received wrong field value(s)',
     DELETED: 'Successfully deleted',
     DELETE_FAIL: 'Deletion failed',
+    EDITING_FAIL: 'Editing record failed',
     INVALID_ID: 'Invalid ID',
     NOT_FOUND: 'Not found',
     UNKNOWN_ERROR: 'Operation error',
@@ -13,14 +14,12 @@ export const API_MESSAGES = {
     LOGIN_ERR: 'Login failed',
     REGISTER_ERR: 'Register failed',
 
-    FAIL_CREATING_FILE: 'Failed to create file record',
-    FAIL_GETTING_FILE: 'Failed to retrieve file info',
+    FAIL_CREATING: 'Failed to create record',
+    FAIL_GETTING: 'Failed to retrieve info',
     NO_FILE: 'No file provided or wrong format',
     UPLOAD_FAIL: 'File upload failed',
     IMAGE_NOT_FOUND: 'Image not found',
     IMAGE_VALID: 'Only image files are allowed',
-    IMAGE_ERROR: 'Failed to retrieve image',
-    UPDATE_ONE_RES: 'Update article based on its ID',
-    DELETE_ONE_RES: 'Delete article based on its ID',
+    IMAGE_ERROR: 'Failed to retrieve image' 
 };
 

@@ -1,21 +1,19 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Post as PostModel, Prisma, Comment } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+import { API_MESSAGES } from 'src/constants/api-messages';
 import { FileService } from 'src/file/file.service';
+import { GetPostsQueryDto } from './dto/post.dto';
 
 @Injectable()
 export class PostService {
+  private readonly logger = new Logger(PostService.name);
   constructor(private prisma: PrismaService, private readonly fileService: FileService) { }
 
   async checkAndCreateKeyword({ body }: { body: string; }): Promise<number> {
     try {
       const existed = await this.prisma.keyword.findFirst({
-        where: {
-          body: {
-            contains: body,
-          },
-        }
+        where: { body: { contains: body, }, }
       });
       if (existed) return existed.id;
       else {
@@ -23,7 +21,8 @@ export class PostService {
         return newWord.id;
       }
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -31,16 +30,12 @@ export class PostService {
     try {
       return this.prisma.post.create({ data });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
-  async getPosts(params: {
-    lang: string;
-    skip?: number;
-    orderBy?: Prisma.PostOrderByWithRelationInput;
-    userID?: string;
-  }): Promise<PostModel[]> {
+  async getPosts(params: GetPostsQueryDto & { orderBy?: Prisma.PostOrderByWithRelationInput; }): Promise<PostModel[]> {
     let { skip, orderBy } = params;
     let where: any = { lang: params.lang };
 
@@ -53,87 +48,64 @@ export class PostService {
         include: { comments: true, files: true, keywords: true, author: { select: { id: true, activity: true, firstname: true, lastname: true, email: true } } }
       });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
-  async getSavedByUserPosts(params: { userID: string; }): Promise<PostModel[]> {
+  async getSavedByUserPosts({ userID }: { userID: string; }): Promise<PostModel[]> {
     try {
-      return await this.prisma.post.findMany({
-        where: {
-          savedBy: {
-            some: {
-              id: +params.userID,
-            },
-          },
-        },
-        include: {
-          author: true,
-          keywords: true,
-          files: true,
-          comments: true
-        }
+      return this.prisma.post.findMany({
+        where: { savedBy: { some: { id: +userID } } },
+        include: { author: true, keywords: true, files: true, comments: true },
       });
     } catch (err) {
-      console.error(err.message);
-    };
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
+    }
   }
 
-  async getPost(
-    questionWhereUniqueInput: Prisma.PostWhereUniqueInput,
-  ): Promise<PostModel | null> {
-    const result = await this.prisma.post.findUnique({
-      where: questionWhereUniqueInput,
-      include: {
-        comments: {
-          include: {
-            author: {
-              select: {
-                firstname: true,
-                lastname: true,
-                activity: true
-              }
-            },
-            replyOn: {
-              include: {
-                author: {
-                  select: {
-                    firstname: true,
-                    lastname: true,
-                    activity: true
-                  }
+  async getPost(where: Prisma.PostWhereUniqueInput): Promise<PostModel> {
+    try {
+      const result = await this.prisma.post.findUnique({
+        where,
+        include: {
+          comments: {
+            include: {
+              author: { select: { firstname: true, lastname: true, activity: true } },
+              replyOn: {
+                include: {
+                  author: { select: { firstname: true, lastname: true, activity: true } },
                 },
-              }
-            }
-          }
+              },
+            },
+          },
+          files: true,
+          keywords: true,
+          author: { select: { firstname: true, lastname: true, activity: true } },
         },
-        files: true,
-        keywords: true,
-        author: {
-          select: {
-            firstname: true,
-            lastname: true,
-            activity: true
-          }
-        }
+      });
+      if (!result) {
+        throw new HttpException(`Post ${where.id} not found`, HttpStatus.NOT_FOUND);
       }
-    });
-    if (!result) throw new HttpException(`Post ${questionWhereUniqueInput.id} not exists `, HttpStatus.NOT_FOUND);
-    return result;
+      return result;
+    } catch (err) {
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw err instanceof HttpException
+        ? err
+        : new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  async updatePost(params: {
-    where: Prisma.PostWhereUniqueInput;
-    data: Prisma.PostUpdateInput;
-  }): Promise<PostModel> {
+  async updatePost(params: { where: Prisma.PostWhereUniqueInput; data: Prisma.PostUpdateInput; }): Promise<PostModel> {
     const { data, where } = params;
-    const post = await this.getPost(params.where);
-    if (!post) throw new HttpException(`Post ${where.id} not exists `, HttpStatus.NOT_FOUND);
+    await this.getPost(where);
     try {
       return this.prisma.post.update({ where, data });
     } catch (err) {
-      console.error(err.message);
-    };
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async deletePost(where: Prisma.PostWhereUniqueInput): Promise<PostModel> {
@@ -151,7 +123,8 @@ export class PostService {
 
       return this.prisma.post.delete({ where });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.DELETE_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.DELETE_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -159,7 +132,8 @@ export class PostService {
     try {
       return this.prisma.comment.create({ data });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -189,20 +163,18 @@ export class PostService {
         }
       });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
-  async updateComment(params: {
-    where: Prisma.CommentWhereUniqueInput;
-    data: Prisma.CommentUpdateInput;
-  }): Promise<Comment> {
+  async updateComment(params: { where: Prisma.CommentWhereUniqueInput; data: Prisma.CommentUpdateInput; }): Promise<Comment> {
     const { data, where } = params;
     try {
       return this.prisma.comment.update({ where, data });
     } catch (err) {
-      console.error(err.message);
-      throw new HttpException(`Comment ${where.id} not exists `, HttpStatus.NOT_FOUND);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
@@ -210,7 +182,8 @@ export class PostService {
     try {
       return this.prisma.comment.delete({ where });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.DELETE_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.DELETE_FAIL, HttpStatus.NOT_FOUND);
     };
   }
 
@@ -218,33 +191,33 @@ export class PostService {
     try {
       return this.prisma.post.count({ where: { author: { id: params.id } } });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
-  async addArticleToFavorites(userID: string, id: number): Promise<void> {
+  async addArticleToFavorites(userID: number, id: number): Promise<void> {
     try {
       await this.prisma.user.update({
-        where: { id: +userID },
-        data: {
-          savedPosts: {
-            connect: { id },
-          },
-        },
+        where: { id: userID },
+        data: { savedPosts: { connect: { id } }, },
       });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
-  async removeArticleFromFavorites(userID: string, id: number) {
-    await this.prisma.user.update({
-      where: { id: +userID },
-      data: {
-        savedPosts: {
-          disconnect: { id },
-        },
-      },
-    });
+  async removeArticleFromFavorites(userID: number, id: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userID },
+        data: { savedPosts: { disconnect: { id }, }, },
+      });
+    }
+    catch (err) {
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
   }
 }

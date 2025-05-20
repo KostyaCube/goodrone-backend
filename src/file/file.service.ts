@@ -14,8 +14,8 @@ export class FileService {
     try {
       return await this.prisma.file.create({ data });
     } catch (err) {
-      this.logger.error(`${API_MESSAGES.FAIL_CREATING_FILE}: ${err.message}`);
-      throw new HttpException(API_MESSAGES.FAIL_CREATING_FILE, HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(`${API_MESSAGES.FAIL_CREATING}: ${err.message}`);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -27,8 +27,8 @@ export class FileService {
       }
       return file;
     } catch (err) {
-      this.logger.error(`${API_MESSAGES.FAIL_GETTING_FILE}: ${err.message}`);
-      throw new HttpException(API_MESSAGES.FAIL_GETTING_FILE, HttpStatus.INTERNAL_SERVER_ERROR);
+      this.logger.error(`${API_MESSAGES.FAIL_GETTING}: ${err.message}`);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
