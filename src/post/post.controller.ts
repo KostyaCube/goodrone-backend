@@ -54,7 +54,7 @@ export class PostController {
 
       if (images) {
         const promises = images.map(async (image) => {
-          const photoUrl = `${process.env.HOST}/file/${image.filename}`;
+          const photoUrl = `${process.env.HOST}:${process.env.PORT}/file/${image.filename}`;
           const savedImage = await this.fileService.createFile({
             link: photoUrl,
           });
@@ -108,7 +108,7 @@ export class PostController {
 
     if (images) {
       const promises = images.map(async (image) => {
-        const photoUrl = `${process.env.HOST}/file/${image.filename}`;
+        const photoUrl = `${process.env.HOST}:${process.env.PORT}/file/${image.filename}`;
         try {
           const savedImage = await this.fileService.createFile({
             created_at: new Date(),
@@ -186,9 +186,10 @@ export class PostController {
 
   @UseGuards(AuthGuard('jwt'))
   @Delete('articles/:id')
-  async deletePost(@Param('id', ParseIntPipe) id: number): Promise<PostModel> {
+  async deletePost(@Param('id', ParseIntPipe) id: number): Promise<void> {
     try {
-      return await this.postService.deletePost({ id });
+      await this.postService.deletePost({ id });
+      return;
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.DELETE_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     }

@@ -44,7 +44,7 @@ export class UserService {
 
       return user;
     } catch (err) {
-      this.logger.error(`${API_MESSAGES.USER_EXISTS}:  ${err.message}`);
+      this.logger.warn(`${API_MESSAGES.LOGIN_ERR}:  ${err.message}`);
       if (err instanceof HttpException) {
         throw err;
       }

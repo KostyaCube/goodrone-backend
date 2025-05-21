@@ -1,4 +1,4 @@
-import { IsString, IsArray, IsOptional, MinLength, MaxLength } from 'class-validator';;
+import { IsString, IsArray, IsOptional, MinLength, MaxLength, ArrayMaxSize } from 'class-validator';;
 import { PartialType } from '@nestjs/mapped-types';
 import { Prisma } from '@prisma/client';
 
@@ -15,7 +15,9 @@ export class CreatePostDto {
 
     @IsArray()
     @IsOptional()
-    @MaxLength(10, { each: true })
+    @ArrayMaxSize(10)
+    @IsString({ each: true })
+    @MaxLength(30, { each: true })
     keywords?: string[];
 
     @IsString()
@@ -37,7 +39,9 @@ export class UpdatePostDto extends PartialType(CreatePostDto) {
 
     @IsArray()
     @IsOptional()
-    @MaxLength(10, { each: true })
+    @ArrayMaxSize(10)
+    @IsString({ each: true })
+    @MaxLength(30, { each: true })
     keywords?: string[];
 
     @IsString()
@@ -48,9 +52,23 @@ export class UpdatePostDto extends PartialType(CreatePostDto) {
 
 
 export class GetPostsQueryDto {
+    @IsString()
+    @IsOptional()
     lang: string;
+
+    @IsOptional()
+    @IsString()
     skip?: number;
+
+    @IsOptional()
+    @IsString()
     order?: keyof Prisma.PostOrderByWithRelationInput;
+
+    @IsOptional()
+    @IsString()
     userID?: string;
+
+    @IsOptional()
+    @IsString()
     saved?: string;
 }

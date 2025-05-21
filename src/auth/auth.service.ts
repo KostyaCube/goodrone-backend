@@ -12,6 +12,7 @@ import { UserService } from '../user/user.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { API_MESSAGES } from 'src/constants/api-messages';
+import { AuthResponse } from './jwt.strategy';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +23,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) { }
 
-  async register(dto: RegisterDto): Promise<{ token: string; user: User; }> {
+  async register(dto: RegisterDto): Promise<AuthResponse> {
     const existingUser = await this.userService.findOne({ email: dto.email });
     if (existingUser) {
       this.logger.warn(`${API_MESSAGES.USER_EXISTS}: ${dto.email}`);
@@ -44,7 +45,7 @@ export class AuthService {
     return this.generateToken(user);
   }
 
-  async login(dto: LoginDto): Promise<{ token: string; user: User; }> {
+  async login(dto: LoginDto): Promise<AuthResponse> {
     const user = await this.userService.findOne({ email: dto.email });
 
     if (!user) {
@@ -61,9 +62,10 @@ export class AuthService {
     return this.generateToken(user);
   }
 
-  private generateToken(user: User): { token: string; user: User; } {
+  private generateToken(user: User): AuthResponse {
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload);
-    return { token, user };
+    const { password, ...userWithoutPassword } = user;
+    return { token, user: userWithoutPassword };
   }
 }

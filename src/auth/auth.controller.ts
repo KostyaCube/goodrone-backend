@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { User } from '@prisma/client';
 import { API_MESSAGES } from 'src/constants/api-messages';
+import { AuthResponse } from './jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
@@ -12,7 +13,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) { }
 
   @Post('register')
-  async signUp(@Body() registerDto: RegisterDto): Promise<{ token: string; user: User; }> {
+  async signUp(@Body() registerDto: RegisterDto): Promise<AuthResponse> {
     try {
       return await this.authService.register(registerDto);
     } catch (err) {
@@ -23,7 +24,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async signIn(@Body() loginDto: LoginDto): Promise<{ token: string; user: User; }> {
+  async signIn(@Body() loginDto: LoginDto): Promise<AuthResponse> {
     try {
       return await this.authService.login(loginDto);
     } catch (err) {

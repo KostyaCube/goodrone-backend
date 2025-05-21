@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
+import { User } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 export interface TokenPayload {
@@ -10,6 +11,11 @@ export interface TokenPayload {
 export interface AuthRequest extends Request {
   token: string;
   user: TokenPayload;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: Omit<User, 'password'>;
 }
 
 @Injectable()

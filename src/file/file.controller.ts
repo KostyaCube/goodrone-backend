@@ -63,7 +63,7 @@ export class FileController {
       throw new HttpException(API_MESSAGES.NO_FILE, HttpStatus.BAD_REQUEST);
     }
 
-    const photoUrl = `${process.env.HOST}/file/${image.filename}`;
+    const photoUrl = `${process.env.HOST}:${process.env.PORT}/file/${image.filename}`;
     try {
       return await this.fileService.createFile({
         created_at: new Date(),

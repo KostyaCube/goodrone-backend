@@ -13,7 +13,7 @@ export class PostService {
   async checkAndCreateKeyword({ body }: { body: string; }): Promise<number> {
     try {
       const existed = await this.prisma.keyword.findFirst({
-        where: { body: { contains: body, }, }
+        where: { body: { contains: body, mode: 'insensitive', }, }
       });
       if (existed) return existed.id;
       else {
