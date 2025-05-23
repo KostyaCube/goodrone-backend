@@ -40,7 +40,7 @@ export class PostService {
     let where: any = { lang: params.lang };
 
     if (params.userID) {
-      where = { author: { id: params.userID } };
+      where = { author: { id: +params.userID } };
     }
     try {
       return this.prisma.post.findMany({
