@@ -254,11 +254,11 @@ export class PostController {
   }
 
   @Get('articles-length/:id')
-  async getUserPostsLength(@Param('id') id: string): Promise<number> {
+  async getUserPostsLength(@Param('id', ParseIntPipe) id: number): Promise<number> {
     try {
-      return await this.postService.getUsersPostsLength({ id: Number(id) });
+      return await this.postService.getUsersPostsLength({ id });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   };
 

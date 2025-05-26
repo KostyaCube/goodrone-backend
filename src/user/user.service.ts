@@ -51,4 +51,17 @@ export class UserService {
       throw new HttpException(API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async updateUser(params: { where: Prisma.UserWhereUniqueInput; data: Prisma.UserUpdateInput; }): Promise<User> {
+    const { where, data } = params;
+    try {
+      return this.prisma.user.update({ data, where, });
+    } catch (err) {
+      this.logger.warn(`${API_MESSAGES.UNKNOWN_ERROR}:  ${err.message}`);
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      throw new HttpException(API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
 }
