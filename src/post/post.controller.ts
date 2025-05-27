@@ -6,7 +6,7 @@ import {
   ParseIntPipe
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Post as PostModel, Prisma, Comment } from '@prisma/client';
+import { Post as PostModel, Prisma, Comment, Keyword } from '@prisma/client';
 import { editFileName, imageFileFilter } from 'src/file/file.utils';
 import { FileService } from 'src/file/file.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -21,6 +21,15 @@ import { AddCommentDto, EditCommentDto } from './dto/comment.dto';
 export class PostController {
   constructor(private readonly postService: PostService,
     private readonly fileService: FileService) { }
+
+  @Get('keywords')
+  async getAllKeywords(@Query() params: { take?: string; }): Promise<Keyword[]> {
+    try {
+      return this.postService.getKeywords(+params.take);
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
+    };
+  }
 
   @UseInterceptors(FilesInterceptor('images', 1, {
     storage: diskStorage({ destination: './uploads', filename: editFileName }),

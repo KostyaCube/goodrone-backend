@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { Post as PostModel, Prisma, Comment } from '@prisma/client';
+import { Post as PostModel, Prisma, Comment, Keyword } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { FileService } from 'src/file/file.service';
@@ -9,6 +9,15 @@ import { GetPostsQueryDto } from './dto/post.dto';
 export class PostService {
   private readonly logger = new Logger(PostService.name);
   constructor(private prisma: PrismaService, private readonly fileService: FileService) { }
+
+  async getKeywords(take?: number): Promise<Keyword[]> {
+    try {
+      return take ? this.prisma.keyword.findMany({ take }) : this.prisma.keyword.findMany();
+    } catch (err) {
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.message);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
+    };
+  }
 
   async checkAndCreateKeyword({ body }: { body: string; }): Promise<number> {
     try {
