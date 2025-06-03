@@ -267,7 +267,7 @@ export class PostController {
     try {
       return await this.postService.getUsersPostsLength({ id });
     } catch (err) {
-      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
     };
   };
 
