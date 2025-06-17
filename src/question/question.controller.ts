@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put, Query, UploadedFiles, UseInterceptors, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put, Query, UploadedFiles, UseInterceptors, Req, UnauthorizedException, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { QuestionService } from './question.service';
 import { CreateQuestionDto, GetQuestionsQueryDto } from './dto/question.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -46,7 +46,7 @@ export class QuestionController {
       title, body,
       author: { connect: { id: req.user.id } },
       keywords: {
-        connect: keywordsArr.map(id => ({ id })) || []
+        connect: keywordsArr.map(id => ({ id }))
       },
       files: { connect: [] },
       created_at: currentDate,
@@ -68,7 +68,7 @@ export class QuestionController {
       }
       return this.questionService.createQuestion(createQuestionData);
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -116,15 +116,13 @@ export class QuestionController {
         ...params, orderBy, where, userID: params.userID
       });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
 
   }
 
   @Get('questions-search/:searchString')
-  async getFilteredPosts(
-    @Param('searchString') searchString: string,
-  ): Promise<QuestionModel[]> {
+  async getFilteredPosts(@Param('searchString') searchString: string,): Promise<QuestionModel[]> {
     try {
       return this.questionService.getQuestions({
         where: {
@@ -139,18 +137,18 @@ export class QuestionController {
         },
       });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
   @Get('questions/:id')
-  async getQuestionById(@Param('id') id: string): Promise<QuestionModel> {
+  async getQuestionById(@Param('id', ParseIntPipe) id: number,): Promise<QuestionModel> {
     try {
-      if (!Number.isNaN(Number(id))) return this.questionService.getQuestion({ id: Number(id) });
+      if (!Number.isNaN(id)) return this.questionService.getQuestion({ id: Number(id) });
       else
         throw new HttpException(`Wrong id: ${id}`, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   };
 
@@ -160,11 +158,7 @@ export class QuestionController {
   }))
   @UseGuards(AuthGuard('jwt'))
   @Put('questions/:id')
-  async editQuestion(
-    @Param('id') id: string,
-    @Body() data: UpdatePostDto,
-    @UploadedFiles() images?: Array<Express.Multer.File>
-  ): Promise<QuestionModel> {
+  async editQuestion(@Param('id', ParseIntPipe) id: number, @Body() data: UpdatePostDto, @UploadedFiles() images?: Array<Express.Multer.File>): Promise<QuestionModel> {
     let { keywords } = data;
 
     // const question = await this.questionService.getQuestion({ id: Number(id) });
@@ -174,9 +168,10 @@ export class QuestionController {
     //     });
     //     await Promise.all(oldImages);
     // };
+
     try {
       await this.questionService.updateQuestion({
-        where: { id: Number(id) },
+        where: { id },
         data: {
           keywords: {
             set: []
@@ -184,8 +179,9 @@ export class QuestionController {
         }
       });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.UNKNOWN_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
+
     const scope = this;
 
     const promises = keywords.map(async (word: string) => {
@@ -222,20 +218,20 @@ export class QuestionController {
 
     try {
       return this.questionService.updateQuestion({
-        where: { id: Number(id) },
+        where: { id },
         data: updateQuestionData,
       });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.UNKNOWN_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
   @Get('questions/make-viewed/:id')
-  async makeViewed(@Param('id') id: string): Promise<void> {
+  async makeViewed(@Param('id', ParseIntPipe) id: number): Promise<void> {
     try {
-      if (!Number.isNaN(Number(id)))
+      if (!Number.isNaN(id))
         await this.questionService.updateQuestion({
-          where: { id: Number(id) },
+          where: { id },
           data: {
             views: {
               increment: 1
@@ -245,45 +241,52 @@ export class QuestionController {
       else
         throw new HttpException(`Wrong id: ${id}`, HttpStatus.BAD_REQUEST);
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.UNKNOWN_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Delete('questions/:id')
-  async deletePost(@Param('id') id: string): Promise<QuestionModel> {
+  async deletePost(@Param('id', ParseIntPipe) id: number): Promise<QuestionModel> {
     try {
-      return this.questionService.deleteQuestion({ id: Number(id) });
+      return this.questionService.deleteQuestion({ id });
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.DELETE_FAIL, HttpStatus.BAD_REQUEST);
     };
   }
 
   @Get('keywords')
-  async getAllKeywords(@Query() params: {
-    take?: string;
-  }): Promise<Keyword[]> {
+  async getAllKeywords(@Query() params: { take?: string; }): Promise<Keyword[]> {
     try {
       return this.postService.getKeywords(Number(params.take));
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.BAD_REQUEST);
     };
   }
 
-  @Post('questions/favorites/:userID/:id')
-  async addQuestionToFavorite(@Param('id') id: string, @Param('userID') userID: string): Promise<void> {
+  @UseGuards(AuthGuard('jwt'))
+  @Post('questions/favorites/:id')
+  async addQuestionToFavorite(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
     try {
-      return this.questionService.addQuestionToFavorites(userID, Number(id));
+      return this.questionService.addQuestionToFavorites(req.user.id, id);
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.UNKNOWN_ERROR, HttpStatus.BAD_REQUEST);
     };
   }
 
-  @Delete('questions/favorites/:userID/:id')
-  async removeFromFavorites(@Param('id') id: string, @Param('userID') userID: string): Promise<void> {
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('questions/favorites/:id')
+  async removeFromFavorites(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
     try {
-      return this.questionService.removeFromFavorites(userID, Number(id));
+      return this.questionService.removeFromFavorites(req.user.id, id);
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.UNKNOWN_ERROR, HttpStatus.BAD_REQUEST);
     };
   }
 
@@ -292,7 +295,7 @@ export class QuestionController {
     try {
       return this.questionService.getQuestionsCount();
     } catch (err) {
-      console.error(err.message);
+      throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.BAD_REQUEST);
     };
   }
 }

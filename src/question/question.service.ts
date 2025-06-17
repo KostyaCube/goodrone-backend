@@ -1,10 +1,13 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Question, Prisma, Keyword } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
+import { API_MESSAGES } from 'src/constants/api-messages';
 import { FileService } from 'src/file/file.service';
 
 @Injectable()
 export class QuestionService {
+  private readonly logger = new Logger(QuestionService.name);
+
   constructor(private prisma: PrismaService,
     private readonly fileService: FileService,
   ) { }
@@ -13,13 +16,12 @@ export class QuestionService {
     try {
       return this.prisma.question.create({ data });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
-  async getQuestion(
-    questionWhereUniqueInput: Prisma.QuestionWhereUniqueInput,
-  ): Promise<Question | null> {
+  async getQuestion(questionWhereUniqueInput: Prisma.QuestionWhereUniqueInput,): Promise<Question> {
     try {
       const result = this.prisma.question.findUnique({
         where: questionWhereUniqueInput,
@@ -39,15 +41,13 @@ export class QuestionService {
       if (!result) throw new HttpException(`Question ${questionWhereUniqueInput.id} not exists `, HttpStatus.NOT_FOUND);
       return result;
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
   async getQuestions(params: {
-    skip?: number;
-    where?: Prisma.QuestionWhereInput;
-    orderBy?: Prisma.QuestionOrderByWithRelationInput;
-    userID?: string;
+    skip?: number; where?: Prisma.QuestionWhereInput; orderBy?: Prisma.QuestionOrderByWithRelationInput; userID?: string;
   }): Promise<Question[]> {
     let { skip, where, orderBy, userID } = params;
     if (userID) {
@@ -67,7 +67,8 @@ export class QuestionService {
         }
       });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
@@ -81,7 +82,8 @@ export class QuestionService {
       if (!question) throw new HttpException(`Question ${where.id} not exists `, HttpStatus.NOT_FOUND);
       else return this.prisma.question.update({ where, data });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -100,7 +102,8 @@ export class QuestionService {
       // }
       return this.prisma.question.delete({ where });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.DELETE_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.DELETE_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
@@ -108,14 +111,15 @@ export class QuestionService {
     try {
       return take ? this.prisma.keyword.findMany({ take }) : this.prisma.keyword.findMany();
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.NOT_FOUND);
     };
   }
 
-  async addQuestionToFavorites(userID: string, id: number): Promise<void> {
+  async addQuestionToFavorites(userID: number, id: number): Promise<void> {
     try {
       await this.prisma.user.update({
-        where: { id: +userID },
+        where: { id: userID },
         data: {
           savedQuestions: {
             connect: { id },
@@ -123,26 +127,33 @@ export class QuestionService {
         },
       });
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
-  async removeFromFavorites(userID: string, questionId: number) {
-    await this.prisma.user.update({
-      where: { id: +userID },
-      data: {
-        savedQuestions: {
-          disconnect: { id: questionId },
+  async removeFromFavorites(userID: number, questionId: number) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userID },
+        data: {
+          savedQuestions: {
+            disconnect: { id: questionId },
+          },
         },
-      },
-    });
+      });
+    } catch (err) {
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
   }
 
   async getQuestionsCount(): Promise<number> {
     try {
       return await this.prisma.question.count();
     } catch (err) {
-      console.error(err.message);
+      this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 }
