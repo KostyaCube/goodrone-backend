@@ -112,7 +112,6 @@ export class QuestionService {
     };
   }
 
-
   async addQuestionToFavorites(userID: string, id: number): Promise<void> {
     try {
       await this.prisma.user.update({
@@ -139,36 +138,9 @@ export class QuestionService {
     });
   }
 
-  async createKeyword(data: Prisma.KeywordCreateInput): Promise<Keyword> {
-    try {
-      return this.prisma.keyword.create({ data });
-    } catch (err) {
-      console.error(err.message);
-    };
-  }
-
   async getQuestionsCount(): Promise<number> {
     try {
       return await this.prisma.question.count();
-    } catch (err) {
-      console.error(err.message);
-    };
-  }
-
-  async checkKeywordAndCreate({ body }: { body: string; }): Promise<number> {
-    try {
-      const existed = await this.prisma.keyword.findFirst({
-        where: {
-          body: {
-            contains: body,
-          },
-        }
-      });
-      if (existed) return existed.id;
-      else {
-        const newWord = await this.prisma.keyword.create({ data: { body: `${body.charAt(0).toUpperCase()}${body.slice(1)}` } });
-        return newWord.id;
-      }
     } catch (err) {
       console.error(err.message);
     };

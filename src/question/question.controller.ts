@@ -1,13 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put, Query, UploadedFiles, UseInterceptors, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { QuestionService } from './question.service';
-import { CreateQuestionDto } from './dto/create-question.dto';
-import { UpdateQuestionDto } from './dto/update-question.dto';
+import { CreateQuestionDto, GetQuestionsQueryDto } from './dto/question.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Question as QuestionModel, Prisma, Keyword } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { FileService } from 'src/file/file.service';
 import { editFileName, imageFileFilter } from 'src/file/file.utils';
 import { PostService } from 'src/post/post.service';
+import { AuthRequest } from 'src/auth/jwt.strategy';
+import { API_MESSAGES } from 'src/constants/api-messages';
+import { AuthGuard } from '@nestjs/passport';
+import { UpdatePostDto } from 'src/post/dto/post.dto';
 
 
 @Controller()
@@ -20,11 +23,16 @@ export class QuestionController {
     storage: diskStorage({ destination: './uploads', filename: editFileName }),
     fileFilter: imageFileFilter
   }))
+  @UseGuards(AuthGuard('jwt'))
   @Post('questions')
-  async createQuestion(@Body() questionData: { title: string; body: string; keywords: string[]; userID: string; },
+  async createQuestion(@Body() data: CreateQuestionDto, @Req() req: AuthRequest,
     @UploadedFiles() images?: Array<Express.Multer.File>): Promise<QuestionModel> {
 
-    const { title, body, keywords, userID } = questionData;
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
+
+    const { title, body, keywords } = data;
     const currentDate = new Date();
     const scope = this;
 
@@ -36,7 +44,7 @@ export class QuestionController {
 
     const createQuestionData = {
       title, body,
-      author: { connect: { id: +userID } },
+      author: { connect: { id: req.user.id } },
       keywords: {
         connect: keywordsArr.map(id => ({ id })) || []
       },
@@ -65,12 +73,7 @@ export class QuestionController {
   }
 
   @Get('questions')
-  async getQuestionsByQuery(@Query() params: {
-    skip?: number;
-    order?: Prisma.QuestionOrderByWithRelationInput;
-    keywords?: string[] | string;
-    userID?: string;
-  }): Promise<QuestionModel[]> {
+  async getQuestionsByQuery(@Query() params: GetQuestionsQueryDto): Promise<QuestionModel[]> {
     const order = params.order as string;
     const orderBy = order ? { [order]: 'desc' } as Prisma.QuestionOrderByWithRelationInput : { rating: 'desc' } as Prisma.QuestionOrderByWithRelationInput;
 
@@ -155,13 +158,14 @@ export class QuestionController {
     storage: diskStorage({ destination: './uploads', filename: editFileName }),
     fileFilter: imageFileFilter
   }))
+  @UseGuards(AuthGuard('jwt'))
   @Put('questions/:id')
   async editQuestion(
     @Param('id') id: string,
-    @Body() questionData: { title?: string; body?: string; keywords: string[]; },
+    @Body() data: UpdatePostDto,
     @UploadedFiles() images?: Array<Express.Multer.File>
   ): Promise<QuestionModel> {
-    let { keywords } = questionData;
+    let { keywords } = data;
 
     // const question = await this.questionService.getQuestion({ id: Number(id) });
     // if (question['files'].length) {
@@ -191,7 +195,7 @@ export class QuestionController {
     const keywordsArr = await Promise.all(promises);
 
     const updateQuestionData = {
-      ...questionData,
+      ...data,
       updated_at: new Date(),
       keywords: {
         connect: keywordsArr.map(id => ({ id })) || []
@@ -278,15 +282,6 @@ export class QuestionController {
   async removeFromFavorites(@Param('id') id: string, @Param('userID') userID: string): Promise<void> {
     try {
       return this.questionService.removeFromFavorites(userID, Number(id));
-    } catch (err) {
-      console.error(err.message);
-    };
-  }
-
-  @Post('questions/keywords')
-  async addKeyword(@Body() word: { body: string; }): Promise<Keyword> {
-    try {
-      return this.questionService.createKeyword(word);
     } catch (err) {
       console.error(err.message);
     };
