@@ -5,12 +5,12 @@ import { IsString, IsArray, IsOptional, MinLength, MaxLength, ArrayMaxSize } fro
 export class CreateQuestionDto {
     @IsString()
     @MaxLength(50)
-    @MinLength(10)
+    @MinLength(5)
     title: string;
 
     @IsString()
-    @MinLength(500)
-    @MaxLength(5000)
+    @MinLength(50)
+    @MaxLength(500)
     body: string;
 
     @IsArray()

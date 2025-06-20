@@ -3,10 +3,21 @@ import { UserService } from './user.service';
 import { PostService } from 'src/post/post.service';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthGuard } from '@nestjs/passport';
+import { QuestionService } from 'src/question/question.service';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService, private readonly postService: PostService) { }
+  constructor(private readonly userService: UserService, private readonly postService: PostService, private readonly questionService: QuestionService) { }
+
+  @Get(':id')
+  async getUserInfoById(@Param('id', ParseIntPipe) id: number): Promise<{ id: string, lastname: string, firstname: string, activity: string; }> {
+    try {
+      const user = await this.userService.findOne({ id });
+      return { id: user.id.toString(), lastname: user.lastname, firstname: user.firstname, activity: user.activity };
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
+    };
+  }
 
   @UseGuards(AuthGuard('jwt'))
   @Post('articles/like')
@@ -95,13 +106,46 @@ export class UserController {
     };
   }
 
-  @Get(':id')
-  async getUserInfoById(@Param('id', ParseIntPipe) id: number): Promise<{ id: string, lastname: string, firstname: string, activity: string; }> {
+  @Post('questions/like')
+  async likeDislikeQuestion(@Body() userData: { userId: number; questionId: number; }): Promise<void> {
+
+    const { userId, questionId } = userData;
     try {
-      const user = await this.userService.findOne({ id });
-      return { id: user.id.toString(), lastname: user.lastname, firstname: user.firstname, activity: user.activity };
+      const user = await this.userService.findOne({ id: userId });
+
+      if (user.likedQuestions.includes(questionId)) {
+        await this.userService.updateUser({
+          where: { id: userId },
+          data: {
+            likedQuestions: [...user.likedQuestions.filter(item => item != questionId)]
+          }
+        });
+        await this.questionService.updateQuestion({
+          where: { id: Number(questionId) },
+          data: {
+            rating: {
+              decrement: 1
+            }
+          }
+        });
+      } else {
+        await this.userService.updateUser({
+          where: { id: userId },
+          data: {
+            likedQuestions: [...user.likedQuestions, questionId]
+          }
+        });
+        await this.questionService.updateQuestion({
+          where: { id: questionId },
+          data: {
+            rating: {
+              increment: 1
+            }
+          }
+        });
+      }
     } catch (err) {
-      throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
+      throw new HttpException(err.message || API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 }
