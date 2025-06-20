@@ -10,5 +10,6 @@ import { PostModule } from 'src/post/post.module';
   imports: [PrismaModule, FileModule, PostModule],
   controllers: [QuestionController],
   providers: [QuestionService, PrismaService],
+  exports: [QuestionService]
 })
 export class QuestionModule { }
