@@ -1,9 +1,10 @@
-import { Controller, Post, Body, HttpException, HttpStatus, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, Get, Param, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
 import { UserService } from './user.service';
 import { PostService } from 'src/post/post.service';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthGuard } from '@nestjs/passport';
 import { QuestionService } from 'src/question/question.service';
+import { AuthRequest } from 'src/auth/jwt.strategy';
 
 @Controller('user')
 export class UserController {
@@ -20,22 +21,20 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard('jwt'))
-  @Post('articles/like')
-  async likeDislikeArticle(
-    @Body() userData: { userId: number; articleId: number; }): Promise<void> {
-    const { userId, articleId } = userData;
+  @Post('articles/like/:id')
+  async likeDislikeArticle(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
 
     try {
-      const user = await this.userService.findOne({ id: userId });
-      if (user.likedArticles.includes(articleId)) {
+      const user = await this.userService.findOne({ id: req.user.id });
+      if (user.likedArticles.includes(id)) {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedArticles: [...user.likedArticles.filter(item => item != articleId)]
+            likedArticles: [...user.likedArticles.filter(item => item != id)]
           }
         });
         await this.postService.updatePost({
-          where: { id: Number(articleId) },
+          where: { id },
           data: {
             rating: {
               decrement: 1
@@ -44,13 +43,13 @@ export class UserController {
         });
       } else {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedArticles: [...user.likedArticles, articleId]
+            likedArticles: [...user.likedArticles, id]
           }
         });
         await this.postService.updatePost({
-          where: { id: articleId },
+          where: { id },
           data: {
             rating: {
               increment: 1
@@ -64,21 +63,20 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard('jwt'))
-  @Post('comments/like')
-  async likeDislikeComment(@Body() userData: { userId: number; commentId: number; }): Promise<void> {
-    const { userId, commentId } = userData;
+  @Post('comments/like/:id')
+  async likeDislikeComment(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
 
     try {
-      const user = await this.userService.findOne({ id: userId });
-      if (user.likedComments.includes(commentId)) {
+      const user = await this.userService.findOne({ id: req.user.id });
+      if (user.likedComments.includes(id)) {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedComments: [...user.likedComments.filter(item => item != commentId)]
+            likedComments: [...user.likedComments.filter(item => item != id)]
           }
         });
         await this.postService.updateComment({
-          where: { id: Number(commentId) },
+          where: { id },
           data: {
             rating: {
               decrement: 1
@@ -87,13 +85,13 @@ export class UserController {
         });
       } else {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedComments: [...user.likedComments, commentId]
+            likedComments: [...user.likedComments, id]
           }
         });
         await this.postService.updateComment({
-          where: { id: commentId },
+          where: { id },
           data: {
             rating: {
               increment: 1
@@ -106,22 +104,22 @@ export class UserController {
     };
   }
 
-  @Post('questions/like')
-  async likeDislikeQuestion(@Body() userData: { userId: number; questionId: number; }): Promise<void> {
+  @UseGuards(AuthGuard('jwt'))
+  @Post('questions/like/:id')
+  async likeDislikeQuestion(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
 
-    const { userId, questionId } = userData;
     try {
-      const user = await this.userService.findOne({ id: userId });
+      const user = await this.userService.findOne({ id: req.user.id });
 
-      if (user.likedQuestions.includes(questionId)) {
+      if (user.likedQuestions.includes(id)) {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedQuestions: [...user.likedQuestions.filter(item => item != questionId)]
+            likedQuestions: [...user.likedQuestions.filter(item => item != id)]
           }
         });
         await this.questionService.updateQuestion({
-          where: { id: Number(questionId) },
+          where: { id },
           data: {
             rating: {
               decrement: 1
@@ -130,13 +128,13 @@ export class UserController {
         });
       } else {
         await this.userService.updateUser({
-          where: { id: userId },
+          where: { id: req.user.id },
           data: {
-            likedQuestions: [...user.likedQuestions, questionId]
+            likedQuestions: [...user.likedQuestions, id]
           }
         });
         await this.questionService.updateQuestion({
-          where: { id: questionId },
+          where: { id },
           data: {
             rating: {
               increment: 1
