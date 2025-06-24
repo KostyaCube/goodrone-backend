@@ -2,7 +2,6 @@ import { Controller, Post, Body, HttpException, HttpStatus, Logger } from '@nest
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { User } from '@prisma/client';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthResponse } from './jwt.strategy';
 

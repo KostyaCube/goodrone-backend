@@ -11,7 +11,8 @@ export class UserService {
 
   async create(createUserDto: Prisma.UserCreateInput): Promise<User> {
     try {
-      return await this.prisma.user.create({ data: createUserDto });
+      await this.prisma.user.create({ data: createUserDto });
+      return this.findOne({ email: createUserDto.email });
     } catch (err) {
       this.logger.error(`${API_MESSAGES.USER_EXISTS}: ${err.message}`);
       throw new HttpException(API_MESSAGES.USER_EXISTS, HttpStatus.BAD_REQUEST);
@@ -37,10 +38,6 @@ export class UserService {
           },
         },
       });
-
-      if (!user) {
-        throw new HttpException(API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
-      }
 
       return user;
     } catch (err) {
