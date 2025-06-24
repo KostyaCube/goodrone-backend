@@ -28,8 +28,8 @@ export class UpdateQuestionDto extends PartialType(CreateQuestionDto) {
     title?: string;
 
     @IsString()
-    @MinLength(500)
-    @MaxLength(5000)
+    @MinLength(50)
+    @MaxLength(500)
     body?: string;
 
     @IsArray()

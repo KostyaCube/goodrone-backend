@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpException, HttpStatus, Put, Query, UploadedFiles, UseInterceptors, Req, UnauthorizedException, UseGuards, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller, Get, Post, Body, Param, Delete, HttpException,
+  HttpStatus, Put, Query, UploadedFiles, UseInterceptors, Req, UnauthorizedException, UseGuards, ParseIntPipe
+} from '@nestjs/common';
 import { QuestionService } from './question.service';
 import { CreateQuestionDto, GetQuestionsQueryDto } from './dto/question.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { Question as QuestionModel, Prisma, Keyword } from '@prisma/client';
+import { Question as QuestionModel, Prisma, Keyword, Answer as AnswerModel } from '@prisma/client';
 import { diskStorage } from 'multer';
 import { FileService } from 'src/file/file.service';
 import { editFileName, imageFileFilter } from 'src/file/file.utils';
@@ -11,13 +14,16 @@ import { AuthRequest } from 'src/auth/jwt.strategy';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdatePostDto } from 'src/post/dto/post.dto';
-
+import { UserService } from 'src/user/user.service';
+import { CreateAnswerDto } from './dto/answer.dto';
 
 @Controller()
 export class QuestionController {
   constructor(private readonly questionService: QuestionService,
     private readonly postService: PostService,
-    private readonly fileService: FileService) { }
+    private readonly fileService: FileService,
+    private readonly userService: UserService,
+  ) { }
 
   @UseInterceptors(FilesInterceptor('images', 5, {
     storage: diskStorage({ destination: './uploads', filename: editFileName }),
@@ -296,6 +302,176 @@ export class QuestionController {
       return this.questionService.getQuestionsCount();
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.FAIL_GETTING, HttpStatus.BAD_REQUEST);
+    };
+  }
+
+  @UseInterceptors(FilesInterceptor('images', 5, {
+    storage: diskStorage({ destination: './uploads', filename: editFileName }),
+    fileFilter: imageFileFilter
+  }))
+  @UseGuards(AuthGuard('jwt'))
+  @Post('answers')
+  async createAnswer(@Body() data: CreateAnswerDto, @Req() req: AuthRequest,
+    @UploadedFiles() images?: Array<Express.Multer.File>): Promise<AnswerModel> {
+
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
+
+    const { body, questionId } = data;
+    const currentDate = new Date();
+
+    const creationData = {
+      body,
+      files: undefined,
+      created_at: currentDate,
+      updated_at: currentDate,
+      author: { connect: { id: req.user.id } },
+      question: { connect: { id: Number(questionId) } },
+    };
+
+    try {
+      if (images) {
+        const promises = images.map(async (image) => {
+          const photoUrl = `${process.env.HOST}/file/${image.filename}`;
+          const savedImage = await this.fileService.createFile({
+            created_at: currentDate,
+            link: photoUrl,
+          });
+          return savedImage.id;
+        });
+        const imagesArray = await Promise.all(promises);
+        creationData.files = { connect: imagesArray.map(id => ({ id })) };
+      }
+      return this.questionService.createAnswer(creationData);
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('answers/up/:id')
+  async voteUp(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    const user = await this.userService.findOne({ id: req.user.id });
+
+    try {
+      if (user.likedAnswers.includes(id)) {
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            likedAnswers: [...user.likedAnswers.filter(item => item != id)]
+          }
+        });
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              decrement: 1
+            }
+          }
+        });
+      } else {
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            likedAnswers: [...user.likedAnswers, id]
+          }
+        });
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              increment: 1
+            }
+          }
+        });
+      }
+      if (user.dislikedAnswers.includes(id)) {
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              increment: 1
+            }
+          }
+        });
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            dislikedAnswers: [...user.dislikedAnswers.filter(item => item != id)]
+          }
+        });
+      }
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.EDITING_FAIL, HttpStatus.BAD_REQUEST);
+    };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('answers/down/:id')
+  async voteDown(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    const user = await this.userService.findOne({ id: req.user.id });
+
+    try {
+      if (user.dislikedAnswers.includes(id)) {
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            dislikedAnswers: [...user.dislikedAnswers.filter(item => item != id)]
+          }
+        });
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              increment: 1
+            }
+          }
+        });
+      } else {
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            dislikedAnswers: [...user.dislikedAnswers, id]
+          }
+        });
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              decrement: 1
+            }
+          }
+        });
+      }
+      if (user.likedAnswers.includes(id)) {
+        await this.questionService.updateAnswer({
+          where: { id },
+          data: {
+            rating: {
+              decrement: 1
+            }
+          }
+        });
+        await this.userService.updateUser({
+          where: { id: user.id },
+          data: {
+            likedAnswers: [...user.likedAnswers.filter(item => item != id)]
+          }
+        });
+      }
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.EDITING_FAIL, HttpStatus.BAD_REQUEST);
+    };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('answers/:answerId')
+  async deleteAnswerById(@Param('answerId', ParseIntPipe) answerId: number,): Promise<AnswerModel> {
+    try {
+      return await this.questionService.deleteAnswer({ id: answerId });
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.DELETE_FAIL, HttpStatus.BAD_REQUEST);
     };
   }
 }

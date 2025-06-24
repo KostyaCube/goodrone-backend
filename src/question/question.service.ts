@@ -1,5 +1,5 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
-import { Question, Prisma, Keyword } from '@prisma/client';
+import { Question, Prisma, Keyword, Answer } from '@prisma/client';
 import { PrismaService } from 'prisma/prisma.service';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { FileService } from 'src/file/file.service';
@@ -154,6 +154,39 @@ export class QuestionService {
     } catch (err) {
       this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
       throw new HttpException(API_MESSAGES.FAIL_GETTING, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  async createAnswer(data: Prisma.AnswerCreateInput): Promise<Answer> {
+    try {
+      return this.prisma.answer.create({ data });
+    } catch (err) {
+      this.logger.error(API_MESSAGES.FAIL_CREATING, err.stack);
+      throw new HttpException(API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  async updateAnswer(params: { where: Prisma.AnswerWhereUniqueInput; data: Prisma.AnswerUpdateInput; }): Promise<Answer> {
+    const { data, where } = params;
+    try {
+      return this.prisma.answer.update({ where, data });
+    } catch (err) {
+      this.logger.error(API_MESSAGES.EDITING_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  async deleteAnswer(where: Prisma.AnswerWhereUniqueInput): Promise<Answer> {
+    const answer = await this.prisma.answer.findUnique({ where, include: { files: true } });
+    try {
+      if (answer.files.length)
+        answer.files.forEach(async file => {
+          await this.fileService.deleteFileById({ id: file.id });
+        });
+      return this.prisma.answer.delete({ where });
+    } catch (err) {
+      this.logger.error(API_MESSAGES.DELETE_FAIL, err.stack);
+      throw new HttpException(API_MESSAGES.DELETE_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 }

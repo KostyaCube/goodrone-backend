@@ -204,7 +204,34 @@ export class PostController {
     }
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  @Get('articles-length/:id')
+  async getUserPostsLength(@Param('id', ParseIntPipe) id: number): Promise<number> {
+    try {
+      return await this.postService.getUsersPostsLength({ id });
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
+    };
+  };
+
+  @Post('articles/favorites/:userID/:id')
+  async addToFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
+    try {
+      return this.postService.addArticleToFavorites(userID, id);
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  @Delete('articles/favorites/:userID/:id')
+  async removeFromFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
+    try {
+      return this.postService.removeArticleFromFavorites(userID, id);
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+    @UseGuards(AuthGuard('jwt'))
   @Post('comments')
   async addComment(@Body() data: AddCommentDto, @Req() req: AuthRequest,): Promise<Comment> {
     if (!req.user) {
@@ -262,30 +289,4 @@ export class PostController {
     }
   }
 
-  @Get('articles-length/:id')
-  async getUserPostsLength(@Param('id', ParseIntPipe) id: number): Promise<number> {
-    try {
-      return await this.postService.getUsersPostsLength({ id });
-    } catch (err) {
-      throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
-    };
-  };
-
-  @Post('articles/favorites/:userID/:id')
-  async addToFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
-    try {
-      return this.postService.addArticleToFavorites(userID, id);
-    } catch (err) {
-      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
-    };
-  }
-
-  @Delete('articles/favorites/:userID/:id')
-  async removeFromFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
-    try {
-      return this.postService.removeArticleFromFavorites(userID, id);
-    } catch (err) {
-      throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
-    };
-  }
 }
