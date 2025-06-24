@@ -231,7 +231,7 @@ export class PostController {
     };
   }
 
-    @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'))
   @Post('comments')
   async addComment(@Body() data: AddCommentDto, @Req() req: AuthRequest,): Promise<Comment> {
     if (!req.user) {

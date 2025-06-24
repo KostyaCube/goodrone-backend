@@ -327,7 +327,7 @@ export class QuestionController {
       created_at: currentDate,
       updated_at: currentDate,
       author: { connect: { id: req.user.id } },
-      question: { connect: { id: Number(questionId) } },
+      question: { connect: { id: +questionId } },
     };
 
     try {

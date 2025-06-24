@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 
 export class CreatePostDto {
     @IsString()
-    @MaxLength(50)
+    @MaxLength(500)
     @MinLength(10)
     title: string;
 
@@ -28,7 +28,7 @@ export class CreatePostDto {
 
 export class UpdatePostDto extends PartialType(CreatePostDto) {
     @IsString()
-    @MaxLength(50)
+    @MaxLength(500)
     @MinLength(10)
     title?: string;
 

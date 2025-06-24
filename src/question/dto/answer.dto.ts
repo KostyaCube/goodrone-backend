@@ -1,9 +1,9 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsString, MinLength, MaxLength, IsNumber } from 'class-validator';
+import { IsString, MinLength, MaxLength } from 'class-validator';
 
 export class CreateAnswerDto {
-    @IsNumber()
-    questionId: number;
+    @IsString()
+    questionId: string;
 
     @IsString()
     @MinLength(10)
