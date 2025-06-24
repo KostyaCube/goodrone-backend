@@ -17,6 +17,6 @@ export const imageFileFilter = (req, file, callback) => {
 export const editFileName = (req, file, callback) => {
   const nameWidth = file.originalname.split('.').length;
   const ext = file.originalname.split('.')[nameWidth - 1];
-  const name = file.originalname.split('.')[0];
-  callback(null, `${name}.${Date.now()}.${ext}`);
+  // const name = file.originalname.split('.')[0];
+  callback(null, `file.${Date.now()}.${ext}`);
 };

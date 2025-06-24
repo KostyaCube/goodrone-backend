@@ -28,12 +28,12 @@ export class UserService {
           savedPosts: true,
           subscriptions: {
             include: {
-              subscribedTo: { select: { id: true, firstname: true, lastname: true, activity: true } },
+              subscribedTo: { select: { id: true, firstname: true, lastname: true, registered: true } },
             },
           },
           subscribers: {
             include: {
-              subscriber: { select: { id: true, firstname: true, lastname: true, activity: true } },
+              subscriber: { select: { id: true, firstname: true, lastname: true, registered: true } },
             },
           },
         },

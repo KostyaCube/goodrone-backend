@@ -14,7 +14,6 @@ model User {
   firstname       String
   lastname        String
   avatar          String?
-  activity        String?
   profile         Profile?
   userQuestions   Question[]     @relation(name: "userQuestions")
   savedQuestions  Question[]     @relation("savedQuestions")
@@ -30,6 +29,7 @@ model User {
   Comment         Comment[]
   subscriptions   Subscription[] @relation("Subscriber")
   subscribers     Subscription[] @relation("SubscribedTo")
+  registered      DateTime       @default(now())
 }
 
 model Profile {

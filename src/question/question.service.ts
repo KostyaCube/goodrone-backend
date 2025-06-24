@@ -58,7 +58,7 @@ export class QuestionService {
         skip, where, orderBy, take: 5,
         include: {
           keywords: true, author: {
-            select: { id: true, firstname: true, lastname: true, activity: true },
+            select: { id: true, firstname: true, lastname: true, registered: true },
           }, savedBy: {
             select: {
               id: true

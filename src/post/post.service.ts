@@ -54,7 +54,7 @@ export class PostService {
     try {
       return this.prisma.post.findMany({
         skip, orderBy, where,
-        include: { comments: true, files: true, keywords: true, author: { select: { id: true, activity: true, firstname: true, lastname: true, email: true } } }
+        include: { comments: true, files: true, keywords: true, author: { select: { id: true, registered: true, firstname: true, lastname: true, email: true } } }
       });
     } catch (err) {
       this.logger.error(API_MESSAGES.FAIL_GETTING, err.stack);
@@ -81,17 +81,17 @@ export class PostService {
         include: {
           comments: {
             include: {
-              author: { select: { firstname: true, lastname: true, activity: true } },
+              author: { select: { firstname: true, lastname: true, registered: true } },
               replyOn: {
                 include: {
-                  author: { select: { firstname: true, lastname: true, activity: true } },
+                  author: { select: { firstname: true, lastname: true, registered: true } },
                 },
               },
             },
           },
           files: true,
           keywords: true,
-          author: { select: { firstname: true, lastname: true, activity: true } },
+          author: { select: { firstname: true, lastname: true, registered: true } },
         },
       });
       if (!result) {
@@ -155,7 +155,7 @@ export class PostService {
             select: {
               firstname: true,
               lastname: true,
-              activity: true, id: true
+              registered: true, id: true
             }
           },
           replyOn: {
@@ -164,7 +164,7 @@ export class PostService {
                 select: {
                   firstname: true,
                   lastname: true,
-                  activity: true
+                  registered: true
                 }
               }
             }

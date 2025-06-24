@@ -333,7 +333,7 @@ export class QuestionController {
     try {
       if (images) {
         const promises = images.map(async (image) => {
-          const photoUrl = `${process.env.HOST}/file/${image.filename}`;
+          const photoUrl = `${process.env.HOST}:${process.env.PORT}/file/${image.filename}`;
           const savedImage = await this.fileService.createFile({
             created_at: currentDate,
             link: photoUrl,

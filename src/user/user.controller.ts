@@ -11,10 +11,10 @@ export class UserController {
   constructor(private readonly userService: UserService, private readonly postService: PostService, private readonly questionService: QuestionService) { }
 
   @Get(':id')
-  async getUserInfoById(@Param('id', ParseIntPipe) id: number): Promise<{ id: string, lastname: string, firstname: string, activity: string; }> {
+  async getUserInfoById(@Param('id', ParseIntPipe) id: number): Promise<{ id: string, lastname: string, firstname: string, registered: string; }> {
     try {
       const user = await this.userService.findOne({ id });
-      return { id: user.id.toString(), lastname: user.lastname, firstname: user.firstname, activity: user.activity };
+      return { id: user.id.toString(), lastname: user.lastname, firstname: user.firstname, registered: user.registered.toString() };
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
     };
