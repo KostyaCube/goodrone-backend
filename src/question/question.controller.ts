@@ -33,7 +33,6 @@ export class QuestionController {
   @Post('questions')
   async createQuestion(@Body() data: CreateQuestionDto, @Req() req: AuthRequest,
     @UploadedFiles() images?: Array<Express.Multer.File>): Promise<QuestionModel> {
-
     if (!req.user) {
       throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
     }
@@ -346,6 +345,48 @@ export class QuestionController {
       return this.questionService.createAnswer(creationData);
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.FAIL_CREATING, HttpStatus.INTERNAL_SERVER_ERROR);
+    };
+  }
+
+  @UseInterceptors(FilesInterceptor('images', 5, {
+    storage: diskStorage({ destination: './uploads', filename: editFileName }),
+    fileFilter: imageFileFilter
+  }))
+  @UseGuards(AuthGuard('jwt'))
+  @Put('answers/:id')
+  async editAnswer(@Param('id', ParseIntPipe) id: number, @Body() data: UpdatePostDto, @Req() req: AuthRequest,
+    @UploadedFiles() images?: Array<Express.Multer.File>): Promise<AnswerModel> {
+
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
+
+    const { body } = data;
+    const currentDate = new Date();
+
+    const updatedData = {
+      body,
+      files: undefined,
+      created_at: currentDate,
+      updated_at: currentDate,
+    };
+
+    try {
+      if (images) {
+        const promises = images.map(async (image) => {
+          const photoUrl = `${process.env.HOST}:${process.env.PORT}/file/${image.filename}`;
+          const savedImage = await this.fileService.createFile({
+            created_at: currentDate,
+            link: photoUrl,
+          });
+          return savedImage.id;
+        });
+        const imagesArray = await Promise.all(promises);
+        updatedData.files = { connect: imagesArray.map(id => ({ id })) };
+      }
+      return this.questionService.updateAnswer({ where: { id }, data: updatedData });
+    } catch (err) {
+      throw new HttpException(err.message || API_MESSAGES.EDITING_FAIL, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
