@@ -65,7 +65,6 @@ export class AuthService {
   private generateToken(user: User): AuthResponse {
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload);
-    const { password, ...userWithoutPassword } = user;
-    return { token, user: userWithoutPassword };
+    return { token };
   }
 }

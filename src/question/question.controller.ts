@@ -15,7 +15,7 @@ import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdatePostDto } from 'src/post/dto/post.dto';
 import { UserService } from 'src/user/user.service';
-import { CreateAnswerDto } from './dto/answer.dto';
+import { CreateAnswerDto, UpdateAnswerDto } from './dto/answer.dto';
 
 @Controller()
 export class QuestionController {
@@ -354,7 +354,7 @@ export class QuestionController {
   }))
   @UseGuards(AuthGuard('jwt'))
   @Put('answers/:id')
-  async editAnswer(@Param('id', ParseIntPipe) id: number, @Body() data: UpdatePostDto, @Req() req: AuthRequest,
+  async editAnswer(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateAnswerDto, @Req() req: AuthRequest,
     @UploadedFiles() images?: Array<Express.Multer.File>): Promise<AnswerModel> {
 
     if (!req.user) {

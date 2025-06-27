@@ -15,7 +15,6 @@ export interface AuthRequest extends Request {
 
 export interface AuthResponse {
   token: string;
-  user: Omit<User, 'password'>;
 }
 
 @Injectable()
