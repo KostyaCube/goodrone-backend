@@ -6,6 +6,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { QuestionService } from 'src/question/question.service';
 import { AuthRequest } from 'src/auth/jwt.strategy';
 import { User } from '@prisma/client';
+import { UserCommonInfoDto } from './dto/user.dto';
 
 @Controller('user')
 export class UserController {
@@ -27,10 +28,19 @@ export class UserController {
   }
 
   @Get(':id')
-  async getUserCommonInfoById(@Param('id', ParseIntPipe) id: number): Promise<{ id: string, lastname: string, firstname: string, registered: string; }> {
+  async getUserCommonInfoById(@Param('id', ParseIntPipe) id: number): Promise<UserCommonInfoDto> {
     try {
       const user = await this.userService.findOne({ id });
-      return { id: user.id.toString(), lastname: user.lastname, firstname: user.firstname, registered: user.registered.toString() };
+      return {
+        id: user.id,
+        email: user.email,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        avatar: user.profile ? user.profile.avatar : null,
+        registered: user.registered,
+        subscriptions: user.subscriptions,
+        subscribers: user.subscribers,
+      };
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.NOT_FOUND, HttpStatus.NOT_FOUND);
     };

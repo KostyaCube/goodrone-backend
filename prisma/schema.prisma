@@ -13,7 +13,6 @@ model User {
   password        String
   firstname       String
   lastname        String
-  avatar          String?
   profile         Profile?
   userQuestions   Question[]     @relation(name: "userQuestions")
   savedQuestions  Question[]     @relation("savedQuestions")
@@ -34,6 +33,7 @@ model User {
 
 model Profile {
   id        Int       @id @default(autoincrement())
+  avatar    File?     @relation(fields: [fileId], references: [id])
   bio       String?
   location  String?
   website   String?
@@ -44,6 +44,7 @@ model Profile {
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id])
   userId    Int       @unique
+  fileId    Int?
 }
 
 model Question {
@@ -62,7 +63,7 @@ model Question {
   files      File[]
   answers    Answer[]
   created_at DateTime  @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
 }
 
 model Keyword {
@@ -96,7 +97,7 @@ model Answer {
   questionId Int
 
   created_at DateTime @default(now())
-  updated_at DateTime
+  updated_at DateTime @updatedAt
 }
 
 model File {
@@ -113,6 +114,8 @@ model File {
   postId     Int?
   comment    Comment?  @relation(fields: [commentId], references: [id])
   commentId  Int?
+
+  Profile Profile[]
 }
 
 model Post {
@@ -153,11 +156,12 @@ model Comment {
 }
 
 model Subscription {
-  id             Int  @id @default(autoincrement())
-  subscriber     User @relation("Subscriber", fields: [subscriberId], references: [id])
+  id             Int      @id @default(autoincrement())
+  subscriber     User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
   subscriberId   Int
-  subscribedTo   User @relation("SubscribedTo", fields: [subscribedToId], references: [id])
+  subscribedTo   User     @relation("SubscribedTo", fields: [subscribedToId], references: [id], onDelete: Cascade)
   subscribedToId Int
+  createdAt      DateTime @default(now())
 
   @@unique([subscriberId, subscribedToId])
 }

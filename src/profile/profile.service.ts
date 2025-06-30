@@ -10,24 +10,18 @@ export class ProfileService {
 
   async create(createProfileDto: CreateProfileDto): Promise<Profile> {
     try {
-      return await this.prisma.profile.create({
-        data: {
-          ...createProfileDto,
-          birthdate: createProfileDto.birthdate
-            ? new Date(createProfileDto.birthdate)
-            : undefined,
-        },
-      });
+      return await this.prisma.profile.create({ data: createProfileDto });
     } catch (error) {
       throw new BadRequestException(API_MESSAGES.FAIL_CREATING);
     }
   }
 
-  async findByUserId(userId: number): Promise<Profile> {
+  async findByUserId(userId: number): Promise<any> {
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
     });
-    if (!profile) {
+    if (!profile) { ///////TODO
+      return {};
       throw new NotFoundException(API_MESSAGES.NOT_FOUND);
     }
     return profile;
