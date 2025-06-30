@@ -213,19 +213,27 @@ export class PostController {
     };
   };
 
-  @Post('articles/favorites/:userID/:id')
-  async addToFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
+  @UseGuards(AuthGuard('jwt'))
+  @Post('articles/favorites/:id')
+  async addToFavorite(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
     try {
-      return this.postService.addArticleToFavorites(userID, id);
+      return this.postService.addArticleToFavorites(req.user.id, id);
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
   }
 
-  @Delete('articles/favorites/:userID/:id')
-  async removeFromFavorite(@Param('id', ParseIntPipe) id: number, @Param('userID', ParseIntPipe) userID: number): Promise<void> {
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('articles/favorites/:id')
+  async removeFromFavorite(@Param('id', ParseIntPipe) id: number, @Req() req: AuthRequest): Promise<void> {
+    if (!req.user) {
+      throw new UnauthorizedException(API_MESSAGES.UNAUTHORIZED_RES);
+    }
     try {
-      return this.postService.removeArticleFromFavorites(userID, id);
+      return this.postService.removeArticleFromFavorites(req.user.id, id);
     } catch (err) {
       throw new HttpException(err.message || API_MESSAGES.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
     };
