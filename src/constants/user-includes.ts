@@ -63,7 +63,6 @@ const fullUserInclude = {
       comments: true,
     },
   },
-  password: false,
 } as const;
 
 type FullUser = Prisma.UserGetPayload<{ include: typeof fullUserInclude; }>;

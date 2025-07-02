@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { API_MESSAGES } from 'src/constants/api-messages';
 import { AuthResponse } from './jwt.strategy';
+import { ProfileService } from 'src/profile/profile.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +22,7 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    private readonly profileService: ProfileService
   ) { }
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
@@ -36,6 +38,12 @@ export class AuthService {
       ...dto,
       password: hashedPassword,
     });
+
+    try {
+      await this.profileService.create({ userId: user.id });
+    } catch (err) {
+      this.logger.error(`${API_MESSAGES.FAIL_CREATING}:`, `${err.message}`);
+    };
 
     if (!user) {
       this.logger.error(`${API_MESSAGES.UNKNOWN_ERROR}: ${dto.email}`);
