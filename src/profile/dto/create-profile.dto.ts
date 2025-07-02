@@ -1,6 +1,11 @@
-import { IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsDateString, IsNumber } from 'class-validator';
 
 export class CreateProfileDto {
+    @IsNumber()
+    userId: number;
+}
+
+export class UpdateProfileDto {
     @IsOptional()
     @IsString()
     bio?: string;
@@ -24,6 +29,4 @@ export class CreateProfileDto {
     @IsOptional()
     @IsString()
     phone?: string;
-
-    userId: number;
 }
